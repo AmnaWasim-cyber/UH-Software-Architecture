@@ -1,0 +1,36 @@
+package Model;
+
+import java.util.HashMap;
+
+public class ParcelMap {
+    private HashMap<String, Parcel> parcelCollection;
+
+    public ParcelMap() {
+        parcelCollection = new HashMap<>();
+    }
+
+    public void addParcel(Parcel parcel) {
+        parcelCollection.put(parcel.getParcelId(), parcel);
+    }
+
+
+    public Parcel findParcel(String parcelId) {
+        return parcelCollection.get(parcelId);
+    }
+
+
+    public boolean containsParcel(String parcelId) {
+        return parcelCollection.containsKey(parcelId);
+    }
+
+
+    public void removeParcel(String parcelId) {
+        parcelCollection.remove(parcelId);
+    }
+
+
+    public int getDepotDays(String parcelId) {
+        Parcel parcel = findParcel(parcelId);
+        return parcel != null ? parcel.getDepotDays() : -1;
+    }
+}
