@@ -1,0 +1,67 @@
+package Model;
+
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Queue;
+
+public class QueueOfCustomers {
+    private Queue<Customer> customerQueue;
+
+    public QueueOfCustomers() {
+        this.customerQueue = new LinkedList<>();
+    }
+
+    public void enqueue(Customer customer) {
+        customerQueue.add(customer);
+    }
+
+    public Customer dequeue() {
+        return customerQueue.poll();
+    }
+
+    public Customer findCustomerByParcelId(String parcelId) {
+        for (Customer customer : customerQueue) {
+            if (customer.getAssociatedParcelId().equals(parcelId)) {
+                return customer;
+            }
+        }
+        return null;
+    }
+
+    public boolean removeCustomerByParcelId(String parcelId) {
+        Iterator<Customer> iterator = customerQueue.iterator();
+        while (iterator.hasNext()) {
+            if (iterator.next().getAssociatedParcelId().equals(parcelId)) {
+                iterator.remove();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void updateCustomerName(String parcelId, String newCustomerName) {
+        Customer customer = findCustomerByParcelId(parcelId);
+        if (customer != null) {
+            customer.setCustomerName(newCustomerName);
+        }
+    }
+
+    public boolean isQueueEmpty() {
+        return customerQueue.isEmpty();
+    }
+
+    public int getQueueSize() {
+        return customerQueue.size();
+    }
+
+    // Display all customers in the queue
+    public String displayAllCustomers() {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (Customer customer : customerQueue) {
+            stringBuilder.append("Queue Position: ").append(customer.getQueuePosition())
+                    .append(", Customer Name: ").append(customer.getCustomerName())
+                    .append(", Parcel ID: ").append(customer.getAssociatedParcelId()).append("\n");
+        }
+        return stringBuilder.toString();
+    }
+}
