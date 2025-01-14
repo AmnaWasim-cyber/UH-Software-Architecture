@@ -1,0 +1,422 @@
+package View;
+
+import Model.Customer;
+import Model.Parcel;
+import Model.ParcelMap;
+import Model.QueueOfCustomers;
+import Utility.Log;
+import Controller.Worker;
+import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Collections;
+
+public class DepotView extends JFrame {
+    private CardLayout layoutSwitcher;
+    private JPanel mainPanel;
+    private JButton workerBtn, adminBtn, customerBtn;
+    private ParcelMap parcelCollection;
+    private QueueOfCustomers customerQueue;
+    private DefaultTableModel parcelTableModel, customerTableModel;
+    private JTable parcelTable, customerTable;
+    private Worker worker;
+
+    public DepotView() {
+        setupUIComponents();
+        parcelCollection = new ParcelMap();
+        customerQueue = new QueueOfCustomers();
+        worker = new Worker(parcelCollection);
+    }
+
+    private void setupUIComponents() {
+        setTitle("Depot Management System");
+        setSize(800, 600);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        workerBtn = new JButton("Worker");
+        adminBtn = new JButton("Admin");
+        customerBtn = new JButton("Customer");
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setBackground(new Color(255, 228, 196));
+        buttonPanel.add(workerBtn);
+        buttonPanel.add(adminBtn);
+        buttonPanel.add(customerBtn);
+        add(buttonPanel, BorderLayout.NORTH);
+
+        layoutSwitcher = new CardLayout();
+        mainPanel = new JPanel(layoutSwitcher);
+        mainPanel.add(createWorkerPanel(), "Worker");
+        mainPanel.add(createAdminPanel(), "Admin");
+        mainPanel.add(createCustomerPanel(), "Customer");
+        add(mainPanel, BorderLayout.CENTER);
+
+        setupButtonListeners();
+    }
+
+    private JPanel createWorkerPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(240, 255, 240)); // Honeydew color
+        JPanel tablePanel = new JPanel(new GridLayout(1, 2));
+
+        parcelTableModel = new DefaultTableModel(new Object[]{"ID", "Days in Depot", "Weight", "Length", "Width", "Height", "Status"}, 0);
+        parcelTable = new JTable(parcelTableModel);
+        styleTable(parcelTable);
+        JScrollPane parcelScrollPane = new JScrollPane(parcelTable);
+
+        customerTableModel = new DefaultTableModel(new Object[]{"Queue No", "Name", "ID"}, 0);
+        customerTable = new JTable(customerTableModel);
+        styleTable(customerTable);
+        JScrollPane customerScrollPane = new JScrollPane(customerTable);
+
+        tablePanel.add(parcelScrollPane);
+        tablePanel.add(customerScrollPane);
+        panel.add(tablePanel, BorderLayout.CENTER);
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setBackground(new Color(255, 239, 213));
+        buttonPanel.add(createLoadButton("Load Parcels", "src/Parcels.csv", parcelTableModel));
+        buttonPanel.add(createLoadButton("Load Customers", "src/Custs.csv", customerTableModel));
+
+        
+        JButton addCustomerBtn = new JButton("Add Customer");
+        JButton removeCustomerBtn = new JButton("Remove Customer");
+        JButton addParcelBtn = new JButton("Add Parcel");
+        JButton markParcelBtn = new JButton("Mark Parcel");
+        JButton calculateFeeBtn = new JButton("Calculate Fee");
+
+        addCustomerBtn.addActionListener(e -> addCustomer());
+        removeCustomerBtn.addActionListener(e -> removeCustomer());
+        addParcelBtn.addActionListener(e -> addParcel());
+        markParcelBtn.addActionListener(e -> markParcel());
+        calculateFeeBtn.addActionListener(e -> calculateFee());
+
+        buttonPanel.add(addCustomerBtn);
+        buttonPanel.add(removeCustomerBtn);
+        buttonPanel.add(addParcelBtn);
+        buttonPanel.add(markParcelBtn);
+        buttonPanel.add(calculateFeeBtn);
+
+        panel.add(buttonPanel, BorderLayout.SOUTH);
+
+        return panel;
+    }
+
+    private void styleTable(JTable table) {
+        table.setFillsViewportHeight(true);
+        table.setBackground(new Color(224, 255, 255)); // Light Cyan color
+        table.setForeground(Color.DARK_GRAY);
+        table.setFont(new Font("Arial", Font.PLAIN, 14));
+        table.setRowHeight(25);
+
+        DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer();
+        headerRenderer.setBackground(new Color(70, 130, 180)); // Steel Blue color
+        headerRenderer.setForeground(Color.WHITE);
+        for (int i = 0; i < table.getModel().getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setHeaderRenderer(headerRenderer);
+        }
+    }
+
+    private JButton createLoadButton(String title, String filePath, DefaultTableModel model) {
+        JButton button = new JButton(title);
+        button.addActionListener(e -> loadData(filePath, model));
+        return button;
+    }
+
+    private void loadData(String filePath, DefaultTableModel model) {
+        model.setRowCount(0);
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            ArrayList<Customer> tempCustomers = new ArrayList<>();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] data = line.split(",");
+                if (model == parcelTableModel) {
+                    String[] fullData = new String[data.length + 1];
+                    System.arraycopy(data, 0, fullData, 0, data.length);
+                    fullData[data.length] = "Unprocessed";
+
+                    Parcel parcel = new Parcel(data[0], Integer.parseInt(data[1]), Double.parseDouble(data[2]),
+                            Integer.parseInt(data[3]), Integer.parseInt(data[4]), Integer.parseInt(data[5]));
+                    parcelCollection.addParcel(parcel);
+                    model.addRow(fullData);
+                } else if (model == customerTableModel) {
+                    if (parcelCollection.containsParcel(data[1])) {
+                        Parcel parcel = parcelCollection.findParcel(data[1]);
+                        tempCustomers.add(new Customer(0, data[0], data[1]));
+                    }
+                }
+            }
+            if (model == customerTableModel) {
+                Collections.sort(tempCustomers, (c1, c2) -> {
+                    Parcel p1 = parcelCollection.findParcel(c1.getAssociatedParcelId());
+                    Parcel p2 = parcelCollection.findParcel(c2.getAssociatedParcelId());
+                    return Integer.compare(p2 != null ? p2.getDepotDays() : -1, p1 != null ? p1.getDepotDays() : -1);
+                });
+                int queueNumber = 1;
+                for (Customer customer : tempCustomers) {
+                    model.addRow(new Object[]{queueNumber, customer.getCustomerName(), customer.getAssociatedParcelId()});
+                    customer.setQueuePosition(queueNumber++);
+                    customerQueue.enqueue(customer);
+                }
+            }
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "Error loading data: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private JPanel createAdminPanel() {
+        JPanel panel = new JPanel();
+        panel.setBackground(new Color(255, 250, 205)); // Lemon Chiffon color
+        JButton generateReportButton = new JButton("Generate Report");
+        generateReportButton.addActionListener(this::generateReport);
+        panel.add(generateReportButton);
+        return panel;
+    }
+
+    private void generateReport(ActionEvent event) {
+        File file = new File("src/report.csv");
+        try (PrintWriter writer = new PrintWriter(file)) {
+            for (int row = 0; row < parcelTableModel.getRowCount(); row++) {
+                for (int col = 0; col < parcelTableModel.getColumnCount(); col++) {
+                    writer.print(parcelTableModel.getValueAt(row, col) + ",");
+                }
+                writer.println();
+            }
+        } catch (FileNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Error saving log: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private JPanel createCustomerPanel() {
+        JPanel panel = new JPanel();
+        panel.setBackground(new Color(255, 240, 245)); // Lavender Blush color
+        JTextField searchField = new JTextField(20);
+        JButton searchButton = new JButton("Search");
+        searchButton.addActionListener(e -> searchParcel(searchField.getText(), panel));
+        panel.add(searchField);
+        panel.add(searchButton);
+        return panel;
+    }
+
+    private void searchParcel(String id, JPanel panel) {
+        for (int row = 0; row < parcelTableModel.getRowCount(); row++) {
+            if (parcelTableModel.getValueAt(row, 0).equals(id)) {
+                String parcelId = String.valueOf(parcelTableModel.getValueAt(row, 0));
+                String daysInDepot = String.valueOf(parcelTableModel.getValueAt(row, 1));
+                String weight = String.valueOf(parcelTableModel.getValueAt(row, 2));
+                String dimensions = String.valueOf(parcelTableModel.getValueAt(row, 3)) + " x " +
+                        String.valueOf(parcelTableModel.getValueAt(row, 4)) + " x " +
+                        String.valueOf(parcelTableModel.getValueAt(row, 5));
+
+                String details = "Parcel ID: " + parcelId + "\n" +
+                        "Days in Depot: " + daysInDepot + "\n" +
+                        "Weight: " + weight + " kg\n" +
+                        "Dimensions: " + dimensions + " (L x W x H)";
+
+                JOptionPane.showMessageDialog(panel, details, "Parcel Details", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+        }
+        JOptionPane.showMessageDialog(panel, "Parcel not found", "Search", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void setupButtonListeners() {
+        workerBtn.addActionListener(e -> layoutSwitcher.show(mainPanel, "Worker"));
+        adminBtn.addActionListener(e -> layoutSwitcher.show(mainPanel, "Admin"));
+        customerBtn.addActionListener(e -> layoutSwitcher.show(mainPanel, "Customer"));
+    }
+
+    private void addCustomer() {
+        JTextField nameField = new JTextField(10);
+        JTextField parcelIdField = new JTextField(10);
+        JPanel panel = new JPanel(new GridLayout(0, 1));
+        panel.add(new JLabel("Name:"));
+        panel.add(nameField);
+        panel.add(new JLabel("Parcel ID:"));
+        panel.add(parcelIdField);
+
+        int result = JOptionPane.showConfirmDialog(null, panel, "Add New Customer",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result == JOptionPane.OK_OPTION) {
+            String name = nameField.getText();
+            String parcelId = parcelIdField.getText();
+            if (!name.isEmpty() && !parcelId.isEmpty() && parcelCollection.containsParcel(parcelId)) {
+                int queueNumber = customerTableModel.getRowCount() + 1;
+                Customer customer = new Customer(queueNumber, name, parcelId);
+                customerTableModel.addRow(new Object[]{queueNumber, name, parcelId});
+                customerQueue.enqueue(customer);
+                Log.getInstance().log("Added customer to queue: " + name);
+                writeCustomerToFile(name, parcelId);
+            } else {
+                JOptionPane.showMessageDialog(null, "Invalid input or parcel does not exist.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void writeCustomerToFile(String name, String parcelId) {
+        try (FileWriter fw = new FileWriter("src/Custs.csv", true);
+             BufferedWriter bw = new BufferedWriter(fw);
+             PrintWriter out = new PrintWriter(bw)) {
+            out.println(name + "," + parcelId);
+        } catch (IOException e) {
+            Log.getInstance().log("Failed to write customer to file: " + e.getMessage());
+        }
+    }
+
+    private void removeCustomer() {
+        int selectedRow = customerTable.getSelectedRow();
+        if (selectedRow >= 0) {
+            String customerId = customerTableModel.getValueAt(selectedRow, 2).toString();
+            customerTableModel.removeRow(selectedRow);
+            if (removeCustomerFromFile(customerId)) {
+                customerQueue.removeCustomerByParcelId(customerId);
+                Log.getInstance().log("Removed customer: " + customerId);
+            } else {
+                JOptionPane.showMessageDialog(null, "Failed to remove customer from file.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            JOptionPane.showMessageDialog(null, "No customer selected.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private boolean removeCustomerFromFile(String customerId) {
+        File inputFile = new File("src/Custs.csv");
+        File tempFile = new File("src/Custs_temp.csv");
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+             BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile))) {
+
+            String currentLine;
+            boolean found = false;
+
+            while ((currentLine = reader.readLine()) != null) {
+                String[] data = currentLine.split(",");
+                if (data.length > 1 && data[1].equals(customerId)) {
+                    found = true;
+                    continue;
+                }
+                writer.write(currentLine + System.lineSeparator());
+            }
+
+            if (!found) {
+                JOptionPane.showMessageDialog(null, "Customer ID not found in file.", "Removal Failed", JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "Failed to read or write during customer removal: " + e.getMessage(), "IO Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+        return replaceFile(inputFile, tempFile);
+    }
+
+    private boolean replaceFile(File inputFile, File tempFile) {
+        if (!inputFile.delete()) {
+            JOptionPane.showMessageDialog(null, "Failed to delete original file.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        if (!tempFile.renameTo(inputFile)) {
+            JOptionPane.showMessageDialog(null, "Failed to rename temporary file.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        return true;
+    }
+
+    private void addParcel() {
+        JTextField idField = new JTextField(10);
+        JTextField daysField = new JTextField(10);
+        JTextField weightField = new JTextField(10);
+        JTextField lengthField = new JTextField(10);
+        JTextField widthField = new JTextField(10);
+        JTextField heightField = new JTextField(10);
+
+        JPanel panel = new JPanel(new GridLayout(0, 2));
+        panel.add(new JLabel("ID:"));
+        panel.add(idField);
+        panel.add(new JLabel("Days in Depot:"));
+        panel.add(daysField);
+        panel.add(new JLabel("Weight:"));
+        panel.add(weightField);
+        panel.add(new JLabel("Length:"));
+        panel.add(lengthField);
+        panel.add(new JLabel("Width:"));
+        panel.add(widthField);
+        panel.add(new JLabel("Height:"));
+        panel.add(heightField);
+
+        int result = JOptionPane.showConfirmDialog(null, panel, "Add New Parcel",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result == JOptionPane.OK_OPTION) {
+            try {
+                String id = idField.getText();
+                int days = Integer.parseInt(daysField.getText());
+                double weight = Double.parseDouble(weightField.getText());
+                int length = Integer.parseInt(lengthField.getText());
+                int width = Integer.parseInt(widthField.getText());
+                int height = Integer.parseInt(heightField.getText());
+                Parcel parcel = new Parcel(id, days, weight, length, width, height);
+                parcelCollection.addParcel(parcel);
+                parcelTableModel.addRow(new Object[]{id, days, weight, length, width, height});
+                Log.getInstance().log("Parcel added with ID: " + id);
+                writeParcelToFile(id, days, weight, length, width, height);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(null, "Invalid input for number fields.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void writeParcelToFile(String id, int days, double weight, int length, int width, int height) {
+        try (FileWriter fw = new FileWriter("src/Parcels.csv", true);
+             BufferedWriter bw = new BufferedWriter(fw);
+             PrintWriter out = new PrintWriter(bw)) {
+            out.println(id + "," + days + "," + weight + "," + length + "," + width + "," + height);
+        } catch (IOException e) {
+            Log.getInstance().log("Failed to write parcel to file: " + e.getMessage());
+            JOptionPane.showMessageDialog(null, "Failed to write parcel to file.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void markParcel() {
+        int selectedRow = parcelTable.getSelectedRow();
+        if (selectedRow >= 0) {
+            String id = parcelTableModel.getValueAt(selectedRow, 0).toString();
+            Parcel parcel = parcelCollection.findParcel(id);
+            if (parcel != null) {
+                parcel.markAsProcessed();
+                parcelTableModel.setValueAt("Processed", selectedRow, 6);
+                Log.getInstance().log("Parcel with ID: " + id + " Marked as Processed");
+            } else {
+                JOptionPane.showMessageDialog(null, "Parcel not found.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            JOptionPane.showMessageDialog(null, "No parcel selected.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void calculateFee() {
+        int selectedRow = parcelTable.getSelectedRow();
+        if (selectedRow >= 0) {
+            String id = parcelTableModel.getValueAt(selectedRow, 0).toString();
+            Parcel parcel = parcelCollection.findParcel(id);
+            if (parcel != null) {
+                double fee = worker.calculateParcelFee(parcel);
+                JOptionPane.showMessageDialog(this, "The fee for parcel ID " + id + " is: $" + fee, "Fee Calculation", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Parcel not found.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "No parcel selected.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    public static void main(String[] args) {
+        EventQueue.invokeLater(() -> new DepotView().setVisible(true));
+    }
+}
