@@ -1,0 +1,68 @@
+package Controller;
+
+import Model.ParcelMap;
+import View.DepotView;
+import Model.Parcel;
+import Model.QueueOfCustomers;
+import Model.Customer;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+public class Manager {
+    private static DepotView depotView;
+    private static Worker workerInstance;
+    private static ParcelMap parcelCollection;
+    private static QueueOfCustomers customerQueue;
+
+    public static void main(String[] args) {
+        parcelCollection = new ParcelMap();
+        customerQueue = new QueueOfCustomers();
+        workerInstance = new Worker(parcelCollection);
+        depotView = new DepotView();
+
+
+        loadParcelData("src/Parcels.csv");
+        loadCustomerData("src/Custs.csv");
+
+
+        java.awt.EventQueue.invokeLater(() -> depotView.setVisible(true));
+
+
+
+    }
+
+    private static void loadParcelData(String filePath) {
+        try (BufferedReader bufferedReader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                String[] data = line.split(",");
+                if (data.length == 6) {
+                    Parcel parcel = new Parcel(data[0].trim(), Integer.parseInt(data[1].trim()),
+                            Double.parseDouble(data[2].trim()),
+                            Integer.parseInt(data[3].trim()),
+                            Integer.parseInt(data[4].trim()),
+                            Integer.parseInt(data[5].trim()));
+                    parcelCollection.addParcel(parcel);
+                }
+            }
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
+    }
+
+    private static void loadCustomerData(String filePath) {
+        try (BufferedReader bufferedReader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                String[] data = line.split(",");
+                if (data.length == 3) {
+                    Customer customer = new Customer(Integer.parseInt(data[0].trim()), data[1].trim(), data[2].trim());
+                    customerQueue.enqueue(customer);
+                }
+            }
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
+    }
+}
