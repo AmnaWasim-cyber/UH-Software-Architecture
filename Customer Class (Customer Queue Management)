@@ -1,0 +1,38 @@
+package Model;
+
+public class Customer {
+    private int queuePosition;
+    private String customerName;
+    private String associatedParcelId;
+
+    public Customer(int queuePosition, String customerName, String associatedParcelId) {
+        this.queuePosition = queuePosition;
+        setCustomerName(customerName);
+        this.associatedParcelId = associatedParcelId;
+    }
+
+
+    public int getQueuePosition() {
+        return queuePosition;
+    }
+
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    public String getAssociatedParcelId() {
+        return associatedParcelId;
+    }
+
+
+    public void setQueuePosition(int queuePosition) {
+        this.queuePosition = queuePosition;
+    }
+
+    public void setCustomerName(String customerName) {
+        if (customerName == null || customerName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Customer name cannot be null or empty.");
+        }
+        this.customerName = customerName;
+    }
+}
