@@ -1,0 +1,40 @@
+package Utility;
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Date;
+
+public class Log {
+    private static Log logInstance;
+    private PrintWriter logWriter;
+
+    private Log() {
+        try {
+
+            logWriter = new PrintWriter(new FileWriter("src/log.txt", true));
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
+    }
+
+    public static Log getInstance() {
+        if (logInstance == null) {
+            synchronized (Log.class) {
+                if (logInstance == null) {
+                    logInstance = new Log();
+                }
+            }
+        }
+        return logInstance;
+    }
+
+    public void log(String logMessage) {
+        logWriter.println(new Date() + ": " + logMessage);
+        logWriter.flush();
+    }
+
+    public void closeLog() {
+        logWriter.close();
+    }
+}
