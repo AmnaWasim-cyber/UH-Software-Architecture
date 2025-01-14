@@ -1,0 +1,83 @@
+package Model;
+
+public class Parcel {
+    private String parcelId;
+    private int depotDays;
+    private double parcelWeight;
+    private int parcelLength, parcelWidth, parcelHeight;
+    private String parcelStatus;
+
+    public Parcel(String parcelId, int depotDays, double parcelWeight, int parcelLength, int parcelWidth, int parcelHeight) {
+        this.parcelId = parcelId;
+        this.depotDays = depotDays;
+        this.parcelWeight = parcelWeight;
+        this.parcelLength = parcelLength;
+        this.parcelWidth = parcelWidth;
+        this.parcelHeight = parcelHeight;
+        this.parcelStatus = "Received";
+    }
+
+
+    public String getParcelId() {
+        return parcelId;
+    }
+
+    public int getDepotDays() {
+        return depotDays;
+    }
+
+    public double getParcelWeight() {
+        return parcelWeight;
+    }
+
+    public int getParcelLength() {
+        return parcelLength;
+    }
+
+    public int getParcelWidth() {
+        return parcelWidth;
+    }
+
+    public int getParcelHeight() {
+        return parcelHeight;
+    }
+
+    public String getParcelStatus() {
+        return parcelStatus;
+    }
+
+
+    public void setDepotDays(int depotDays) {
+        if (depotDays < 0) {
+            throw new IllegalArgumentException("Depot days cannot be negative.");
+        }
+        this.depotDays = depotDays;
+    }
+
+    public void setParcelWeight(double parcelWeight) {
+        if (parcelWeight < 0) {
+            throw new IllegalArgumentException("Parcel weight cannot be negative.");
+        }
+        this.parcelWeight = parcelWeight;
+    }
+
+    public void setParcelDimensions(int parcelLength, int parcelWidth, int parcelHeight) {
+        if (parcelLength < 0 || parcelWidth < 0 || parcelHeight < 0) {
+            throw new IllegalArgumentException("Parcel dimensions cannot be negative.");
+        }
+        this.parcelLength = parcelLength;
+        this.parcelWidth = parcelWidth;
+        this.parcelHeight = parcelHeight;
+    }
+
+    public void setParcelStatus(String parcelStatus) {
+        if (parcelStatus == null || parcelStatus.trim().isEmpty()) {
+            throw new IllegalArgumentException("Parcel status cannot be null or empty.");
+        }
+        this.parcelStatus = parcelStatus;
+    }
+
+    public void markAsProcessed() {
+        this.parcelStatus = "Processed";
+    }
+}
