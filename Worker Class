@@ -1,0 +1,27 @@
+package Controller;
+
+import Model.ParcelMap;
+import Model.Parcel;
+
+public class Worker {
+    private ParcelMap parcelCollection;
+
+    public Worker(ParcelMap parcelCollection) {
+        this.parcelCollection = parcelCollection;
+    }
+
+    public double calculateParcelFee(Parcel parcel) {
+        double baseFee = 10.0;
+        double weightFee = parcel.getParcelWeight() * 0.5;
+        double storageFee = parcel.getDepotDays() * 0.75;
+        return baseFee + weightFee + storageFee;
+    }
+
+    public Parcel processParcelCollection(String parcelId) {
+        Parcel parcel = parcelCollection.findParcel(parcelId);
+        if (parcel != null) {
+            parcelCollection.removeParcel(parcelId);
+        }
+        return parcel;
+    }
+}
